@@ -1,0 +1,3 @@
+(function(){
+    var bb = "bbbbbbb";
+}());
