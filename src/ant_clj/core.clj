@@ -1,5 +1,5 @@
 (ns ant-clj.core
-    (:use ant-clj.targets))
+    (:use ant-clj.common-targets))
 
 (def my-ns *ns*)
 

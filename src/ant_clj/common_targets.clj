@@ -1,4 +1,4 @@
-(ns ant-clj.targets
+(ns ant-clj.common-targets
     (:use clojure.java.shell)
     (:use clojure.java.io)
     (:use ant-clj.dbg)
