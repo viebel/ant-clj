@@ -15,10 +15,13 @@
   `(def ~(with-meta name {:target `(fn[] (and ~@body))})
     (fn[] (run-target (var ~name)))))
 
+(defn- load-project-files[]
+  (let [os (-> "os.name" System/getProperty .toLowerCase)]
+    (load-file "build.properties.clj")
+    (load-file (str "build.properties." os ".clj"))
+    (load-file "build.clj")))
 
-(load-file "build.properties.clj")
-(load-file (str "build.properties." (-> "os.name" System/getProperty .toLowerCase) ".clj"))
-(load-file "build.clj")
+(load-project-files); this must be executed in current namespace
 
 (defn -main [target & args]
   (try
