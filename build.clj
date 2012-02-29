@@ -1,7 +1,5 @@
 (require '(clojure [string :as string]))
-
 (def apache-lib (str apache-root "javascript/lib/"))
-
 (deftarget mobile
   (shexec "xmllint"
           (fs/glob "xml-ok/*.xml"))

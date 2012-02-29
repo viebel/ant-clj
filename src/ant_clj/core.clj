@@ -29,16 +29,12 @@
   (with-ns my-ns
            (defn safe-load-file [f]
              (when (fs/exists? f)
-               (try (load-file f)
-                    (catch Exception e
-                           (println "file invalid:" f)
-                           (println e)
-                           (throw e)))))
+               (load-file f)))
+
            (let [os (-> "os.name" System/getProperty .toLowerCase)]
              (safe-load-file "build.properties.clj")
              (safe-load-file (str "build.properties." os ".clj"))
-             (safe-load-file "build.clj"))))
-
+             (load-file "build.clj"))))
 
 (defn- run-main-target[target]
   (try
@@ -52,4 +48,4 @@
    (load-project-files)
    (run-main-target target)
    (println "BUILD SUCESSFUL")
-   (catch Exception e (println "BUILD FAILED" e))))
+   (catch Exception e (println (.getMessage e) "\nBUILD FAILED" ))))
