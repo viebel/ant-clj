@@ -16,10 +16,13 @@
     (fn[] (run-target (var ~name)))))
 
 (defn- load-project-files[]
+  (defn safe-load-file [f]
+    (when (fs/exists? f)
+      (load-file f)))
   (let [os (-> "os.name" System/getProperty .toLowerCase)]
-    (load-file "build.properties.clj")
-    (load-file (str "build.properties." os ".clj"))
-    (load-file "build.clj")))
+    (safe-load-file "build.properties.clj")
+    (safe-load-file (str "build.properties." os ".clj"))
+    (safe-load-file "build.clj")))
 
 (load-project-files); this must be executed in current namespace
 
