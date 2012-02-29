@@ -1,5 +1,8 @@
 (ns ant-clj.core
-    (:use ant-clj.common-targets))
+    (:gen-class)
+    (:use ant-clj.dbg)
+    (:use ant-clj.common-targets)
+    (:use clojure.stacktrace))
 
 (def my-ns *ns*)
 
@@ -15,23 +18,38 @@
   `(def ~(with-meta name {:target `(fn[] (and ~@body))})
     (fn[] (run-target (var ~name)))))
 
+(defmacro with-ns [n & body]
+  `(let [oldns# *ns*]
+     (in-ns ~n)
+     ~@body
+     (in-ns (-> oldns# str symbol))))
+
 (defn- load-project-files[]
-  (defn safe-load-file [f]
-    (when (fs/exists? f)
-      (load-file f)))
-  (let [os (-> "os.name" System/getProperty .toLowerCase)]
-    (safe-load-file "build.properties.clj")
-    (safe-load-file (str "build.properties." os ".clj"))
-    (safe-load-file "build.clj")))
+  (with-ns 'ant-clj.core
+           (defn safe-load-file [f]
+             (when (fs/exists? f)
+               (try (load-file f) true
+                    (catch Exception e
+                           (println "file invalid:" f)
+                           (println e)
+                           false))))
+           (let [os (-> "os.name" System/getProperty .toLowerCase)]
+             (and (safe-load-file "build.properties.clj")
+                  (safe-load-file (str "build.properties." os ".clj"))
+                  (safe-load-file "build.clj")))))
 
-(load-project-files); this must be executed in current namespace
 
-(defn -main [target & args]
+(defn- execute-target[target]
   (try
    (if-let [res (get-target target)]
-           (do (if (res)
-                   (println "BUILD SUCESSFUL")
-                   (println "BUILD FAILED"))
-               (shutdown-agents))
+           (if (res)
+               (do (println "BUILD SUCESSFUL")
+                   true)
+               (println "BUILD FAILED"))
            (println "TARGET NOT FOUND: " target))
-   (catch Exception e (println e))))
+   (catch Exception e (println e))
+   (finally (shutdown-agents))))
+
+(defn -main [target & args]
+  (and (load-project-files)
+       (execute-target target)))
