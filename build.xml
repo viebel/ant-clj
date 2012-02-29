@@ -1,0 +1,438 @@
+<?xml version="1.0"?>
+<project name="konaLayer" basedir="../" default="build">
+	<!-- Define variables/paths used in this build script -->
+	<property environment="env"/>
+	<property file="./bin/build.properties.${os.name}" />
+	<property file="./bin/build.properties" />
+	
+	<condition property="apache.root" value="${env.APACHE_ROOT}" else="${apache.root.default}"> 
+		<isset property="env.APACHE_ROOT"/> 
+	</condition>
+
+	<property name="apache.lib" value="${apache.root}/javascript/lib"/>
+	
+	<condition property="flash.root" value="${env.FLASH_ROOT}" else="${flash.root.default}"> 
+		<isset property="env.FLASH_ROOT"/> 
+	</condition>
+	
+    <target name="build">
+		<echo message="kona.version=${kona.version}"/>
+		<antcall target="check-properties"/>
+		<antcall target="clean-dir"/>
+		<antcall target="konalibinline"/>
+		<antcall target="oldlayer"/>
+		<antcall target="newlayer"/>
+		<antcall target="3rdParty"/>
+		<antcall target="validate"/>
+		<antcall target="testAll"/>
+	</target>
+	
+	<target name="ab">
+		<echo message="kona.version=${kona.version}"/>
+		<echo message="kona.prev_version=${kona.prev_version}"/>
+		<antcall target="check-properties-ab"/>
+		<antcall target="clean-dir"/>
+		<antcall target="konalibinline_ab"/>
+		<antcall target="newlayer"/>
+	</target>
+
+	<target name="build_campaigns">
+		<copy todir="${apache.lib}/flash/campaigns">
+			<fileset dir="../campaigns/campaigns">
+				<include name="**.swf"/>
+			</fileset>
+		</copy>
+	</target>
+	
+	<target name="3rdParty">
+		<copy tofile="${apache.lib}/${kona.version}/3rdparty.js"
+ 			file="./srcHtml/3rdparty/3rdparty.js" />
+	</target>
+	
+	<target name="debug">
+		<antcall target="build">
+			<param name="debug" value="true"/>
+		</antcall>
+	</target>
+
+	<target name="campaigns">
+		<antcall target="build"/>
+		<antcall target="build_campaigns"/>
+	</target>
+
+	<target name="check-properties">
+		<available file="${apache.root}" property="apache.root.exists"/>
+		<fail unless="apache.root.exists" message="apache root is set to ${apache.root} which doesn't exist. Use APACHE_ROOT env to override"/>
+		<available file="${flash.root}" property="flash.root.exists"/>
+		<fail unless="flash.root.exists" message="flash source code root (konaLayer) is set to ${flash.root} which doesn't exist. Use FLASH_ROOT environment variable to override"/>
+		<fail unless="kona.version" message="kona.version variable not set"></fail>
+	</target>
+	
+	<target name="check-properties-ab" depends="check-properties">
+		<fail unless="kona.prev_version" message="kona.prev_version variable not set"></fail>
+	</target>
+
+	<target name="compressfile">
+		<java jar="./bin/yuicompressor-2.4.2.jar" fork="true">
+			<arg value="--type"/>
+			<arg value="js"/>
+			<arg value="--charset"/>
+			<arg value="utf-8"/>
+			<arg value="${file}"/>
+			<arg value="-o"/>
+			<arg value="${file}.compress"/>
+		</java>
+		<move file="${file}.compress" tofile="${file}"/>
+	</target>
+
+	<target name="compressNewLayer">
+		<antcall target="compressfile">
+			<param name="file" value="${apache.lib}/${kona.version}/KonaFlashBase.js"/>
+		</antcall>
+	</target>
+ 	<target name="compressMobileBase">
+		<antcall target="compressfile">
+			<param name="file" value="${apache.lib}/${kona.version}/KonaMobile.js"/>
+		</antcall>
+	</target>
+    <target name="compressOldLayer">
+		<antcall target="compressfile">
+			<param name="file" value="${apache.lib}/${kona.version}/KonaBase.js"/>
+		</antcall>
+	</target>
+
+	<target name="compress" depends="build">
+		<antcall target="compressfile">
+			<param name="file" value="${apache.root}/javascript/lib/${kona.version}/KonaLibInline.js"/>
+		</antcall>
+ 		<copy tofile="${apache.lib}/KonaLibInline.js"
+ 			file="${apache.lib}/${kona.version}/KonaLibInline.js" />
+		<antcall target="compressNewLayer"/>
+		<antcall target="compressOldLayer"/>
+        <antcall target="compressMobileBase"/>
+	</target>
+
+	<!-- Clean out a directory -->
+	<target name="clean-dir">
+		<delete dir="${apache.lib}/${kona.version}" />
+		<delete file="${apache.lib}/KonaLibInline.js" />
+		<mkdir dir="${apache.lib}" />
+		<mkdir dir="${apache.lib}/${kona.version}" />
+		<mkdir dir="${apache.lib}/flash" />
+	</target>
+	
+	<target name="copytolatest">
+		<copy todir="${apache.lib}/latest">
+			<fileset dir="${apache.lib}/${kona.version}"/>
+		</copy>
+	</target>
+	
+    <target name="generate-layer">
+        <delete file="./build/resource/${layer.type}Creator.js"/>
+        <delete file="./build/tmp/${layer.type}.stripped.html"/>
+
+        <copy file="./resource/${layer.type}.html" tofile="./build/tmp/${layer.type}.stripped.html" />
+        <replaceregexp file="./build/tmp/${layer.type}.stripped.html" match="^\s+" replace="" byline="true" />
+        <replaceregexp file="./build/tmp/${layer.type}.stripped.html" match="\s+$" replace="" byline="true" />
+        <replaceregexp file="./build/tmp/${layer.type}.stripped.html" match="'" replace="\\\\'" byline="true" flags="g"/>
+        <replaceregexp file="./build/tmp/${layer.type}.stripped.html" match="\s{2,}" replace=" " flags="g"/>
+        <replaceregexp file="./build/tmp/${layer.type}.stripped.html" match="\n" replace=" " byline="false" flags="g"/>
+
+        <!-- first echo - append is false -->
+        
+        <concat destfile="./build/resource/${layer.type}Creator.js">
+            <string>
+                /* begin auto generated*/
+                KONTERA_INTERFACE.create_${layer.type} = function() {
+                function createHtml() { return '</string>
+            <fileset file="./build/tmp/${layer.type}.stripped.html"/>
+            <string>';}</string>
+            <fileset file="./resource/${layer.type}.js"/>
+            <!--![CDATA[var mainDiv = $JK('<div/>').attr('id', 'kona_layer_main_div').html(createHtml());]]-->
+            <string> return mainDiv; }; /* end auto generated */ </string>
+        </concat>
+    </target>
+    
+    <target name="generate-layers">
+		<delete dir="./build/resource"/>
+        <antcall target="generate-layer">
+            <param name="layer.type" value="fullImage"></param>
+        </antcall>
+
+        <antcall target="generate-layer">
+            <param name="layer.type" value="textAndLogo"></param>
+        </antcall>
+
+        <antcall target="generate-layer">
+            <param name="layer.type" value="related"></param>
+        </antcall>
+
+        <antcall target="generate-layer">
+            <param name="layer.type" value="edge"></param>
+        </antcall>
+    </target>
+    
+	<target name="konalibinline">
+		<antcall target="concatFiles">
+			<param name="srcFile" value="./bin/compress_konalibinline.txt"/>
+			<param name="destFile" value="./bin/KonaLibInline.js"/>
+		</antcall>
+		<concat destfile="${apache.lib}/${kona.version}/KonaLibInline.js">
+			<header trimleading="yes">
+				// auto generated
+				if (!window.KONA_VERSION) {
+					window.KONA_VERSION = "${kona.version}";
+				}
+				// end auto generated
+				
+			</header>
+			<fileset file="./bin/KonaLibInline.js"/>
+		</concat>
+ 		<copy tofile="${apache.lib}/KonaLibInline.js"
+ 			file="${apache.lib}/${kona.version}/KonaLibInline.js" />
+	</target>
+
+	<target name="konalibinline_ab">
+		<antcall target="concatFiles">
+			<param name="srcFile" value="./bin/compress_konalibinline.txt"/>
+			<param name="destFile" value="./bin/KonaLibInline.js"/>
+		</antcall>
+		<concat destfile="${apache.lib}/${kona.version}/KonaLibInline.js">
+			<header trimleading="yes">
+				// auto generated
+				if (!window.KONA_VERSION) {
+					window.KONA_VERSION = "${kona.version}";
+				}
+				window.KONA_PREV_VERSION = "${kona.prev_version}";
+				window.konaAB_JSVersion = 50;
+				// end auto generated
+			</header>
+			<fileset file="./bin/KonaLibInline.js"/>
+		</concat>
+ 		<copy tofile="${apache.lib}/KonaLibInline.js"
+ 			file="${apache.lib}/${kona.version}/KonaLibInline.js" />
+	</target>
+
+    <target name="oldlayer">
+		<antcall target="concatFiles">
+			<param name="srcFile" value="./bin/compress_html.txt"/>
+			<param name="destFile" value="${apache.lib}/${kona.version}/KonaBase.js"/>
+		</antcall>
+		<copy todir="${apache.lib}/imgs">
+			<fileset dir="imgs"/>
+		</copy>
+		<copy todir="${apache.lib}/flash">
+			<fileset dir="flash">
+				<include name="KonteraPlayer.swf"/>
+				<include name="konaFlashExpand.swf"/>
+				<include name="KonteraFLVPlayer.swf"/>
+				<include name="KonteraFLVPlayer.swf"/>
+			</fileset>
+		</copy>
+	</target>
+	
+	<target name="newlayer" depends="jslint-src">
+		<antcall target="newlayerjs"/>
+		<antcall target="newLayerFlash"/>
+        <antcall target="mobilelayerjs"/>
+	</target>
+	
+	<target name="newlayerjs">
+		<antcall target="concatFiles">
+			<param name="srcFile" value="./bin/compress_flash.txt"/>
+			<param name="destFile" value="${apache.lib}/${kona.version}/KonaFlashBase.js"/>
+		</antcall>
+		<copy todir="${apache.lib}/${kona.version}/flash">
+			<fileset dir="flash">
+				<include name="konaFlashExpand.swf"/>
+			</fileset>
+		</copy>		
+	</target>
+
+    <target name="checkFilesExist">
+        <filelist id="my.list" dir="." files="${filelist}" />
+        <fileset id="my.set" dir="." includes="${filelist}" />
+
+        <resourcecount refid="my.list" property="my.list.size" />
+        <resourcecount refid="my.set" property="my.set.size" />
+
+        <difference id="missing">
+            <resources refid="my.list"/>
+            <resources refid="my.set"/>
+        </difference>
+
+        <fail message="Missing files for concat: ${ant.refid:missing}">
+            <condition>
+                <not>
+                    <equals arg1="${my.set.size}" arg2="${my.list.size}" />
+                </not>
+            </condition>
+        </fail>
+    </target>
+
+    <target name="mobilelayerjs">
+        <!-- auto generate layer HTMLs-->
+        <antcall target="generate-layers"/>
+
+		<antcall target="concatFiles">
+			<param name="srcFile" value="./bin/compress_mobile.txt"/>
+			<param name="destFile" value="${apache.lib}/${kona.version}/KonaMobile.js"/>
+		</antcall>
+        
+        <!-- add autogenerated files (layers' HTML) -->
+        <concat destfile="${apache.lib}/${kona.version}/KonaMobile.js" append="true">
+            <fileset file="./build/resource/*Creator.js"/>
+        </concat>
+	</target>
+	
+	<target name="newLayerFlash">
+		<condition property="buildtarget" value="build-debug-layer" else="build-release-layer"> 
+		   <isset property="debug"/> 
+		</condition>
+		<ant antfile="${flash.root}/build/build.xml" target="${buildtarget}" dir="${flash.root}"/>
+	</target>
+
+	<target name="concatFiles">
+		<delete file="${destFile}"/>
+		<loadfile srcFile="${srcFile}" property="filelist">
+			<filterchain>
+				<prefixlines prefix=" "/>
+		    	<striplinebreaks/>
+			</filterchain>
+		</loadfile>
+
+        <antcall target="checkFilesExist">
+            <param name="filelist" value="${filelist}"/>
+        </antcall>
+
+		<concat destfile="${destFile}" fixlastline="yes">
+			<filelist dir="." files="${filelist}"/>
+		</concat>
+	</target>
+	
+    <target name="jslint-tests">
+        <apply executable="ruby" failonerror="true">
+            <arg path="./jslint.rb"/>
+            <srcfile/>
+            <targetfile/>
+            <fileset dir="../javascript/unitTest" includes="**/*.js">
+                <exclude name="jasmine_tweaks/*"/>
+                <exclude name="**/SpecUTF8.js"/>
+            </fileset>
+            <mapper type="package" from="*.js" to="*.jslint"/>
+        </apply>
+    </target>
+
+    <target name="jslint-resources">
+        <apply executable="ruby" failonerror="true">
+            <arg path="./jslint.rb"/>
+            <srcfile/>
+            <targetfile/>
+            <fileset dir="../javascript/resource" includes="**/*.js">
+            </fileset>
+            <mapper type="package" from="*.js" to="*.jslint"/>
+        </apply>
+    </target>
+
+    <target name="jslint-src">
+        <apply executable="ruby" failonerror="true">
+            <arg path="./jslint.rb"/>
+            <srcfile/>
+            <targetfile/>
+            <fileset dir="srcFlash" includes="**/*.js" excludesfile="no_jslint.txt"/>
+            <fileset dir="inline" includes="**/*.js" excludes="inline_prefix.js, inline_postfix.js"/>
+            <mapper type="package" from="*.js" to="*.jslint"/>
+        </apply>
+    </target>
+
+
+
+    <target name="tests" depends="jslint-tests">
+		<delete dir="${apache.root}/unitTest" />
+		<copy todir="${apache.root}/pages">
+			<fileset dir="../javascript/tests/newLayer/pages">
+				<exclude name="*.svn"/>
+			</fileset>
+		</copy>
+		<copy todir="${apache.root}/unitTest">
+			<fileset dir="../javascript/unitTest">
+				<exclude name="*.svn"/>
+			</fileset>
+		</copy>
+		<copy todir="${apache.root}/3rdParty/jasmine-reporters">
+			<fileset dir="${basedir}/../../3rdParty/jasmine-reporters">
+				<exclude name="*.svn"/>
+			</fileset>
+		</copy>
+	</target>
+	
+    <target name="rubyRequirements">
+        <exec executable="ruby" failonerror="true" >
+            <arg value="./bin/install_ruby_requirements.rb"/>
+        </exec>
+    </target>
+
+	<target name="validateHost">
+		<property environment="env"/>
+		<hostinfo prefix="my_host"  host="${my_hostname}"/>
+
+        <condition property="hostResolvesToLocalhost">
+            <equals arg1="${my_host.NAME}" arg2="localhost"/>
+        </condition>
+
+        <fail message="${my_hostname} should refer to localhost (currently resolves to ${my_host.NAME})">
+			<condition>
+				<and>
+					<os family="unix"/>
+                    <not>
+    					<isset property="hostResolvesToLocalhost" />
+                    </not>
+				</and>
+			</condition>
+		</fail>
+	</target>
+	
+	<target name="validate">
+		<antcall target="validateHost">
+			<param name="my_hostname" value="kona.kontera.com"/>
+		</antcall>
+
+		<antcall target="validateHost">
+			<param name="my_hostname" value="konac.kontera.com"/>
+		</antcall>
+	</target>
+
+    <target name="test" depends="validate,tests">
+        <java jar="../../3rdParty/jasmine-reporters/ext/js.jar" dir="../../3rdParty/jasmine-reporters/test" fork="true" failonerror="true">
+            <arg value="-opt"/>
+            <arg value="-1"/>
+            <arg value="envjs.bootstrap.js"/>
+            <arg value="http://localhost/unitTest/specs/SpecRunner.html?${query_string}"/>
+        </java>
+    </target>
+
+    <target name="testMobile">
+        <echo message="testing mobile environment: ios 4"/>
+        <antcall target="test">
+            <param name="query_string" value="kona_iphone=1"/>
+        </antcall>
+
+        <echo message="testing mobile environment: ios 5"/>
+        <antcall target="test">
+            <param name="query_string" value="kona_iphone=1&amp;kona_ios_version=5.0"/>
+        </antcall>
+    </target>
+
+    <target name="testDesktop">
+        <echo message="testing regular environment"/>
+        <antcall target="test">
+            <param name="query_string" value=""/>
+        </antcall>
+    </target>
+
+	<target name="testAll">
+        <antcall target="testDesktop"/>
+        <antcall target="testMobile"/>
+    </target>
+</project>
+        
