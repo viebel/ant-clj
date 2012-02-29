@@ -33,7 +33,8 @@
   (loop [files files output [] errorcode 0]
     (if (or (empty? files) (not= 0 errorcode))
         (do (print-output output)
-            (= 0 errorcode))
+            (when (not= 0 errorcode)
+              (throw (Exception. ""))))
         (let [filename (first files)
                        [errorcode msg] (exec executable filename)]
           (recur (rest files) (conj output msg) errorcode)))))
@@ -42,5 +43,5 @@
   (println "concat:")
   (let [{:keys [srcfile destfile header footer]} (apply hash-map opts)
                content (string/join (map slurp (read-file-list srcfile)))]
-    (spit destfile (str header content footer)) true))
+    (spit destfile (str header content footer))))
 

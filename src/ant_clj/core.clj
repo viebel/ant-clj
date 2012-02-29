@@ -15,41 +15,41 @@
             (var-get t)))
 
 (defmacro deftarget[name & body]
-  `(def ~(with-meta name {:target `(fn[] (and ~@body))})
+  `(def ~(with-meta name {:target `(fn[] ~@body)})
     (fn[] (run-target (var ~name)))))
 
 (defmacro with-ns [n & body]
   `(let [oldns# *ns*]
-     (in-ns ~n)
+    (try
+     (in-ns (-> ~n str symbol))
      ~@body
-     (in-ns (-> oldns# str symbol))))
+     (finally (in-ns (-> oldns# str symbol))))))
 
 (defn- load-project-files[]
-  (with-ns 'ant-clj.core
+  (with-ns my-ns
            (defn safe-load-file [f]
              (when (fs/exists? f)
-               (try (load-file f) true
+               (try (load-file f)
                     (catch Exception e
                            (println "file invalid:" f)
                            (println e)
-                           false))))
+                           (throw e)))))
            (let [os (-> "os.name" System/getProperty .toLowerCase)]
-             (and (safe-load-file "build.properties.clj")
-                  (safe-load-file (str "build.properties." os ".clj"))
-                  (safe-load-file "build.clj")))))
+             (safe-load-file "build.properties.clj")
+             (safe-load-file (str "build.properties." os ".clj"))
+             (safe-load-file "build.clj"))))
 
 
-(defn- execute-target[target]
+(defn- run-main-target[target]
   (try
    (if-let [res (get-target target)]
-           (if (res)
-               (do (println "BUILD SUCESSFUL")
-                   true)
-               (println "BUILD FAILED"))
-           (println "TARGET NOT FOUND: " target))
-   (catch Exception e (println e))
+           (res)
+           (throw (Exception. (str "TARGET NOT FOUND: " target))))
    (finally (shutdown-agents))))
 
 (defn -main [target & args]
-  (and (load-project-files)
-       (execute-target target)))
+  (try
+   (load-project-files)
+   (run-main-target target)
+   (println "BUILD SUCESSFUL")
+   (catch Exception e (println "BUILD FAILED" e))))
