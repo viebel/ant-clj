@@ -14,9 +14,10 @@
   (when-let [t (ns-resolve my-ns (symbol target))]
             (var-get t)))
 
-(defmacro deftarget[name & body]
-  `(def ~(with-meta name {:target `(fn[] ~@body)})
-    (fn[] (execute-target-in-var (var ~name)))))
+(defmacro deftarget[n & body]
+  `(def ~(with-meta n {:target `(fn[] (println (str (-> ~n var meta :name) ":"))
+                                         ~@body)})
+    (fn[] (execute-target-in-var (var ~n)))))
 
 (defmacro with-ns [n & body]
   `(let [oldns# *ns*]

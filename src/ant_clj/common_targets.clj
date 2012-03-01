@@ -29,7 +29,7 @@
           (let [{:keys [exit err]} (exec-and-touch executable filename (str filename ".touch"))]
             [exit (str filename ": " (if (= 0 exit) "OK" (str "FAILED\n" err)))]))))
   
-  (println executable ":")
+  (println (str executable ":"))
   (loop [files files output [] errorcode 0]
     (if (or (empty? files) (not= 0 errorcode))
         (do (print-output output)
