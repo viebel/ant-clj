@@ -4,7 +4,7 @@
 
 (deftarget build
           (println "kona.version:" kona-version)
-          (run-target "mobile"))
+          (run-target :mobile))
 
 (deftarget mobile
   (shexec "xmllint"

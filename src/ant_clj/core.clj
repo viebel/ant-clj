@@ -11,9 +11,16 @@
             (println (str (:name (meta target)) ":"))
             (t)))
 
-(defn- get-target[target]
+(defmulti get-target (fn [target] (let [t (type target)]
+                                    (cond 
+                                    (=  t String) :string
+                                    (isa? t clojure.lang.Named) :named
+                                    :else :unsupported))))
+(defmethod get-target :string [target]
   (when-let [t (ns-resolve my-ns (symbol target))]
             (var-get t)))
+(defmethod get-target :named [target]
+  (get-target (name target)))
 
 (defmacro deftarget[n & body]
   `(def ~(with-meta n {:target `(fn[] ~@body)})
