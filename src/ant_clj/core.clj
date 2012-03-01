@@ -6,7 +6,7 @@
 
 (def my-ns *ns*)
 
-(defn- run-target [target]
+(defn- execute-target-in-var [target]
   (when-let [t (:target (meta target))]
             (t)))
 
@@ -16,7 +16,7 @@
 
 (defmacro deftarget[name & body]
   `(def ~(with-meta name {:target `(fn[] ~@body)})
-    (fn[] (run-target (var ~name)))))
+    (fn[] (execute-target-in-var (var ~name)))))
 
 (defmacro with-ns [n & body]
   `(let [oldns# *ns*]
@@ -36,11 +36,13 @@
              (safe-load-file (str "build.properties." os ".clj"))
              (load-file "build.clj"))))
 
-(defn- run-main-target[target]
-  (try
+(defn run-target[target]
    (if-let [res (get-target target)]
            (res)
-           (throw (Exception. (str "TARGET NOT FOUND: " target))))
+           (throw (Exception. (str "TARGET NOT FOUND: " target)))))
+
+(defn- run-main-target[target]
+  (try (run-target target)
    (finally (shutdown-agents))))
 
 (defn -main [target & args]
