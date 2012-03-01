@@ -8,6 +8,7 @@
 
 (defn- execute-target-in-var [target]
   (when-let [t (:target (meta target))]
+            (println (str (:name (meta target)) ":"))
             (t)))
 
 (defn- get-target[target]
@@ -15,8 +16,7 @@
             (var-get t)))
 
 (defmacro deftarget[n & body]
-  `(def ~(with-meta n {:target `(fn[] (println (str (-> ~n var meta :name) ":"))
-                                         ~@body)})
+  `(def ~(with-meta n {:target `(fn[] ~@body)})
     (fn[] (execute-target-in-var (var ~n)))))
 
 (defmacro with-ns [n & body]
