@@ -53,9 +53,10 @@
   (try (run-target target)
    (finally (shutdown-agents))))
 
-(defn -main [target & args]
-  (try
-   (load-project-files)
-   (run-main-target target)
-   (println "BUILD SUCESSFUL")
-   (catch Exception e (println (.getMessage e) "\nBUILD FAILED" ))))
+(defn -main
+  ([] (-main :build))
+  ([target & args] (try
+                   (load-project-files)
+                   (run-main-target target)
+                   (println "BUILD SUCESSFUL")
+                   (catch Exception e (println (.getMessage e) "\nBUILD FAILED" )))))
