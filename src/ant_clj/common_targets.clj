@@ -46,9 +46,8 @@
       (println "create-file:" f)
       (spit f (string/join args)))
 
-(defn concat-files [& opts]
+(defn concat-files [& {:keys [srcfile destfile header footer]}]
   (println "concat:")
-  (let [{:keys [srcfile destfile header footer]} (apply hash-map opts)
-               content (str-from-file-list srcfile)]
+  (let [content (str-from-file-list srcfile)]
     (spit destfile (str header content footer))))
 
