@@ -2,3 +2,4 @@
 .lein-deps-sum
 *.class
 *.jar
+classes/*
