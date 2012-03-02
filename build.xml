@@ -179,7 +179,8 @@
 		</antcall>
 		<concat destfile="${apache.lib}/${kona.version}/KonaLibInline.js">
 			<header trimleading="yes">
-				// auto generated
+				
+                // auto generated
 				if (!window.KONA_VERSION) {
 					window.KONA_VERSION = "${kona.version}";
 				}

@@ -39,9 +39,16 @@
                        [errorcode msg] (exec executable filename)]
           (recur (rest files) (conj output msg) errorcode)))))
 
+(defn str-from-file-list[srcfile]
+  (string/join (map slurp (read-file-list srcfile))))
+
+(defn create-file[f & args]
+      (println "create-file:" f)
+      (spit f (string/join args)))
+
 (defn concat-files [& opts]
   (println "concat:")
   (let [{:keys [srcfile destfile header footer]} (apply hash-map opts)
-               content (string/join (map slurp (read-file-list srcfile)))]
+               content (str-from-file-list srcfile)]
     (spit destfile (str header content footer))))
 
