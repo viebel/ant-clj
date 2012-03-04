@@ -39,8 +39,15 @@
                        [errorcode msg] (exec executable filename)]
           (recur (rest files) (conj output msg) errorcode)))))
 
+(defn str-from-fileset [fileset]
+  (string/join (map slurp fileset)))
+
+(defn str-from-file-matched [matcher-str]
+  (str-from-fileset (fs/glob matcher-str)))
+
 (defn str-from-file-list[srcfile]
-  (string/join (map slurp (read-file-list srcfile))))
+  (str-from-fileset (read-file-list srcfile)))
+
 
 (defn create-file[f & args]
       (println "create-file:" f)
