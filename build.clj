@@ -27,18 +27,13 @@
 
 (defn generate-layers[]
       (defn generate-layer[layer]
-        (defn strip[filename]
-          (defn strip-line [line]
-            (-> line
-                (string/replace #"^\s+" "")
-                (string/replace #"\s+$" "")
-                (string/replace #"'" "\\\\'")
-                (string/replace #"\s{2,}" " ")))
-          (string/join " " (map strip-line (file-lines filename))))
-        
-        (let [stripped-html (str "./build/tmp/" layer ".stripped.html")
-                            html-content (strip (str layer ".html"))]
-          (spit stripped-html html-content)))
+            (create-file (str "./build/tmp/" layer ".stripped.html")
+                         (-> (str "resource/" layer ".html")
+                             (replace-each-line  #"^\s+" ""
+                                                 #"\s+$" ""
+                                                 #"'" "\\\\'"
+                                                 #"\s{2,}" " ")
+                             (join-lines " "))))
 
       (fs/deltree "./build/resource")
       (fs/mkdir "./build/resource")

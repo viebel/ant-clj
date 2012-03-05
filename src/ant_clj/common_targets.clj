@@ -51,6 +51,15 @@
 (defn str-from-file-list[srcfile]
   (str-from-fileset (read-file-list srcfile)))
 
+(defn replace-each-line [content & replacements]
+      (let [lines (string/split content #"\n")
+                  replacement-list (partition 2 replacements)]
+        (string/join "\n" (for [line lines]
+                               (reduce (fn[res [match replacement]] (string/replace res match replacement)) line replacement-list)))))
+
+(defn join-lines [content sep]
+          (string/join sep (string/split content #"\n")))
+
 
 (defn create-file[f & args]
       (println "create-file:" f)
