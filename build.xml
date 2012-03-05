@@ -128,7 +128,6 @@
 	</target>
 	
     <target name="generate-layer">
-        <delete file="./build/resource/${layer.type}Creator.js"/>
         <delete file="./build/tmp/${layer.type}.stripped.html"/>
 
         <copy file="./resource/${layer.type}.html" tofile="./build/tmp/${layer.type}.stripped.html" />

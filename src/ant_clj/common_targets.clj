@@ -5,6 +5,9 @@
     (:require [fs])
     (:require [clojure.string :as string]))
 
+(defn file-lines [f]
+      (line-seq (reader f)))
+
 (defn- read-file-list [srcfile]
   (defn remove-trailing-spaces[s] (string/replace s #"\s+$" ""))
   (->> srcfile
